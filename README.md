@@ -55,7 +55,7 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 - ☑ Word (.doc, .docx)
 - ☑ Excel (.xls, .xlsx)
 - ☑ PowerPoint (.ppt, .pptx)
-- ☐ PDF (.pdf)
+- ☑ PDF (.pdf)
 
 #### 3. 選擇操作模式
 選擇要執行的操作：
@@ -145,10 +145,10 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 **A**: 不會。工具只清除中繼資料（檔案屬性），不會修改文件的實際內容。
 
 ### Q: 為什麼需要安裝 Microsoft Office？
-**A**: 工具使用 Office 的 COM 物件來安全地操作 Office 檔案，因此需要安裝 Office。PDF 檔案處理不需要 Office。
+**A**: Office 檔案（Word、Excel、PowerPoint）的處理使用 Office 的 COM 物件，因此需要安裝 Office。PDF 檔案處理不需要 Office。
 
 ### Q: PDF 檔案處理有什麼限制？
-**A**: PDF 處理使用不同的技術。若要完整清理 PDF 中繼資料，建議將 itextsharp.dll 放在與工具相同的目錄。讀取模式可使用系統內建功能。
+**A**: PDF 處理使用不同的技術。讀取模式可使用系統內建功能。若要完整清理或替換 PDF 中繼資料，建議將 itextsharp.dll 放在與工具相同的目錄。詳見 PDF_SUPPORT.md。
 
 ### Q: 可以還原清除的中繼資料嗎？
 **A**: 不可以。中繼資料一旦清除就無法還原，請在執行前確認或備份重要檔案。建議先使用「讀取模式」查看中繼資料內容。

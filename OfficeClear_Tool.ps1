@@ -242,6 +242,8 @@ function Read-PDFMetadata {
     )
     
     $result = @{}
+    $reader = $null
+    $shell = $null
     
     try {
         # Try using .NET to read PDF metadata
@@ -264,7 +266,6 @@ function Read-PDFMetadata {
                         "Producer" { if ($info.ContainsKey("Producer")) { $result[$item] = $info["Producer"] } }
                     }
                 }
-                $reader.Close()
             }
             else {
                 # Fallback: read basic file properties
@@ -282,8 +283,6 @@ function Read-PDFMetadata {
                         "Keywords" { $result[$item] = $folder.GetDetailsOf($file, 18) }
                     }
                 }
-                
-                [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null
             }
         }
         catch {
@@ -296,6 +295,23 @@ function Read-PDFMetadata {
     }
     catch {
         throw "Failed to read PDF metadata: $($_.Exception.Message)"
+    }
+    finally {
+        # Clean up reader if it was created
+        if ($null -ne $reader) {
+            try {
+                $reader.Close()
+            }
+            catch {}
+        }
+        
+        # Clean up COM object if it was created
+        if ($null -ne $shell) {
+            try {
+                [System.Runtime.InteropServices.Marshal]::ReleaseComObject($shell) | Out-Null
+            }
+            catch {}
+        }
     }
     
     return $result
@@ -311,6 +327,8 @@ function Clean-PDFMetadata {
     
     $tempFile = $null
     $fileStream = $null
+    $stamper = $null
+    $reader = $null
     
     try {
         # Try to load iTextSharp if available
@@ -323,47 +341,43 @@ function Clean-PDFMetadata {
             $fileStream = [System.IO.File]::OpenWrite($tempFile)
             $stamper = New-Object iTextSharp.text.pdf.PdfStamper($reader, $fileStream)
             
-            try {
-                $info = $stamper.MoreInfo
-                
-                foreach ($item in $MetadataItems) {
-                    $value = ""
-                    if ($null -ne $ReplacementValues -and $ReplacementValues.ContainsKey($item)) {
-                        $value = $ReplacementValues[$item]
-                    }
-                    
-                    switch ($item) {
-                        "Title" { $info["Title"] = $value }
-                        "Subject" { $info["Subject"] = $value }
-                        "Author" { $info["Author"] = $value }
-                        "Keywords" { $info["Keywords"] = $value }
-                        "Creator" { $info["Creator"] = $value }
-                        "Producer" { $info["Producer"] = $value }
-                    }
+            $info = $stamper.MoreInfo
+            
+            foreach ($item in $MetadataItems) {
+                $value = ""
+                if ($null -ne $ReplacementValues -and $ReplacementValues.ContainsKey($item)) {
+                    $value = $ReplacementValues[$item]
                 }
                 
-                $stamper.MoreInfo = $info
+                switch ($item) {
+                    "Title" { $info["Title"] = $value }
+                    "Subject" { $info["Subject"] = $value }
+                    "Author" { $info["Author"] = $value }
+                    "Keywords" { $info["Keywords"] = $value }
+                    "Creator" { $info["Creator"] = $value }
+                    "Producer" { $info["Producer"] = $value }
+                }
+            }
+            
+            $stamper.MoreInfo = $info
+            
+            # Close resources before file operations
+            if ($null -ne $stamper) {
                 $stamper.Close()
+                $stamper = $null
+            }
+            if ($null -ne $reader) {
                 $reader.Close()
-                
-                # Close and dispose the file stream before file operations
-                if ($null -ne $fileStream) {
-                    $fileStream.Close()
-                    $fileStream.Dispose()
-                    $fileStream = $null
-                }
-                
-                # Replace original file
-                Copy-Item $tempFile $FilePath -Force
+                $reader = $null
             }
-            finally {
-                if ($null -ne $stamper) {
-                    try { $stamper.Close() } catch {}
-                }
-                if ($null -ne $reader) {
-                    try { $reader.Close() } catch {}
-                }
+            if ($null -ne $fileStream) {
+                $fileStream.Close()
+                $fileStream.Dispose()
+                $fileStream = $null
             }
+            
+            # Replace original file
+            Copy-Item $tempFile $FilePath -Force
         }
         else {
             Write-Log "iTextSharp library not found. PDF cleaning requires itextsharp.dll" "Error"
@@ -374,7 +388,17 @@ function Clean-PDFMetadata {
         throw "Failed to clean PDF metadata: $($_.Exception.Message)"
     }
     finally {
-        # Clean up file stream if still open
+        # Clean up stamper
+        if ($null -ne $stamper) {
+            try { $stamper.Close() } catch {}
+        }
+        
+        # Clean up reader
+        if ($null -ne $reader) {
+            try { $reader.Close() } catch {}
+        }
+        
+        # Clean up file stream
         if ($null -ne $fileStream) {
             try {
                 $fileStream.Close()
