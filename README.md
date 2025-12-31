@@ -201,3 +201,4 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 - [快速開始.md](快速開始.md) - 30 秒快速入門指南
 - [技術文檔.md](技術文檔.md) - 開發者技術文檔
 - [CHANGELOG.md](CHANGELOG.md) - 版本更新記錄
+- [PDF_SUPPORT.md](PDF_SUPPORT.md) - PDF 檔案支援說明與 iTextSharp 安裝指南
