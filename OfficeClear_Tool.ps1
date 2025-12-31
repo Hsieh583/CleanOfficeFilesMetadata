@@ -6,6 +6,10 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
+# Constants for Office COM operations
+$script:RemoveAllDocumentInfo = 1  # wdRDIAll for RemoveDocumentInformation
+$script:AlertsOff = 0              # Disable Office alerts
+
 # Global variables
 $script:CancelRequested = $false
 $script:ProcessedFiles = @()
@@ -48,7 +52,7 @@ function Initialize-OfficeApp {
                 if ($null -eq $script:WordApp) {
                     $script:WordApp = New-Object -ComObject Word.Application
                     $script:WordApp.Visible = $false
-                    $script:WordApp.DisplayAlerts = 0
+                    $script:WordApp.DisplayAlerts = $script:AlertsOff
                     $script:WordApp.ScreenUpdating = $false
                 }
                 return $script:WordApp
@@ -112,7 +116,7 @@ function Clean-WordMetadata {
         }
         
         # Remove hidden document information
-        $doc.RemoveDocumentInformation(1)
+        $doc.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
         
         # Save and close
         $doc.Save()
@@ -158,7 +162,7 @@ function Clean-ExcelMetadata {
         }
         
         # Remove hidden document information
-        $workbook.RemoveDocumentInformation(1)
+        $workbook.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
         
         # Save and close
         $workbook.Save()
@@ -181,7 +185,12 @@ function Clean-PowerPointMetadata {
         throw "PowerPoint application not available"
     }
     
-    $presentation = $app.Presentations.Open($FilePath, $false, $false, $false)
+    # PowerPoint Open parameters
+    $ReadOnly = $false
+    $Untitled = $false  
+    $WithWindow = $false
+    
+    $presentation = $app.Presentations.Open($FilePath, $ReadOnly, $Untitled, $WithWindow)
     
     try {
         # Clean selected metadata properties
@@ -204,7 +213,7 @@ function Clean-PowerPointMetadata {
         }
         
         # Remove hidden document information
-        $presentation.RemoveDocumentInformation(1)
+        $presentation.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
         
         # Save and close
         $presentation.Save()
