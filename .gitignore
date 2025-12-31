@@ -1,0 +1,26 @@
+# Office Metadata Cleaner - .gitignore
+
+# CSV Reports
+Cleanup_Report_*.csv
+
+# Temporary files
+*.tmp
+*.temp
+*~
+
+# Windows thumbnail cache
+Thumbs.db
+ehthumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Recycle Bin
+$RECYCLE.BIN/
+
+# PowerShell module cache
+PSModuleCache/
+
+# Test files (if any)
+test_files/
+test_output/
