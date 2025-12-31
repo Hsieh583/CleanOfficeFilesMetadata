@@ -36,6 +36,7 @@
 ```powershell
 powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 ```
+<img width="790" height="647" alt="image" src="https://github.com/user-attachments/assets/68e12599-7d45-49d8-87b0-5d635525d18d" />
 
 ## 使用說明
 
