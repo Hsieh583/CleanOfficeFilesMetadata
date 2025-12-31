@@ -7,8 +7,8 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
 # Constants for Office COM operations
-$script:RemoveAllDocumentInfo = 1  # wdRDIAll for RemoveDocumentInformation
-$script:AlertsOff = 0              # Disable Office alerts
+$script:RemoveAllDocumentInfo = 1
+$script:AlertsOff = 0
 
 # Global variables
 $script:CancelRequested = $false
@@ -27,10 +27,10 @@ function Write-Log {
     
     $timestamp = Get-Date -Format "HH:mm:ss"
     $symbol = switch ($Type) {
-        "Success" { "[✓]" }
-        "Error" { "[✗]" }
-        "Info" { "[i]" }
-        default { "[i]" }
+        "Success" { "[PASS]" }
+        "Error" { "[FAIL]" }
+        "Info" { "[INFO]" }
+        default { "[INFO]" }
     }
     
     $logMessage = "$timestamp $symbol $Message"
@@ -69,7 +69,6 @@ function Initialize-OfficeApp {
             "PowerPoint" {
                 if ($null -eq $script:PowerPointApp) {
                     $script:PowerPointApp = New-Object -ComObject PowerPoint.Application
-                    # PowerPoint doesn't have ScreenUpdating property
                 }
                 return $script:PowerPointApp
             }
@@ -96,7 +95,6 @@ function Clean-WordMetadata {
     $doc = $app.Documents.Open($FilePath)
     
     try {
-        # Clean selected metadata properties
         foreach ($item in $MetadataItems) {
             try {
                 switch ($item) {
@@ -115,10 +113,7 @@ function Clean-WordMetadata {
             }
         }
         
-        # Remove hidden document information
         $doc.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
-        
-        # Save and close
         $doc.Save()
     }
     finally {
@@ -142,7 +137,6 @@ function Clean-ExcelMetadata {
     $workbook = $app.Workbooks.Open($FilePath)
     
     try {
-        # Clean selected metadata properties
         foreach ($item in $MetadataItems) {
             try {
                 switch ($item) {
@@ -157,14 +151,10 @@ function Clean-ExcelMetadata {
                 }
             }
             catch {
-                # Some properties might not exist or be read-only, continue
             }
         }
         
-        # Remove hidden document information
         $workbook.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
-        
-        # Save and close
         $workbook.Save()
     }
     finally {
@@ -185,7 +175,6 @@ function Clean-PowerPointMetadata {
         throw "PowerPoint application not available"
     }
     
-    # PowerPoint Open parameters
     $ReadOnly = $false
     $Untitled = $false  
     $WithWindow = $false
@@ -193,7 +182,6 @@ function Clean-PowerPointMetadata {
     $presentation = $app.Presentations.Open($FilePath, $ReadOnly, $Untitled, $WithWindow)
     
     try {
-        # Clean selected metadata properties
         foreach ($item in $MetadataItems) {
             try {
                 switch ($item) {
@@ -208,14 +196,10 @@ function Clean-PowerPointMetadata {
                 }
             }
             catch {
-                # Some properties might not exist or be read-only, continue
             }
         }
         
-        # Remove hidden document information
         $presentation.RemoveDocumentInformation($script:RemoveAllDocumentInfo)
-        
-        # Save and close
         $presentation.Save()
     }
     finally {
@@ -232,16 +216,13 @@ function Process-File {
     )
     
     try {
-        # Check file access
         $fileStream = [System.IO.File]::Open($FilePath, 'Open', 'ReadWrite', 'None')
         $fileStream.Close()
         
-        # Save original timestamps
         $fileInfo = Get-Item $FilePath
         $originalCreationTime = $fileInfo.CreationTime
         $originalLastWriteTime = $fileInfo.LastWriteTime
         
-        # Determine file type and clean metadata
         $extension = [System.IO.Path]::GetExtension($FilePath).ToLower()
         
         switch ($extension) {
@@ -256,21 +237,14 @@ function Process-File {
             }
         }
         
-        # Restore original timestamps
         $fileInfo = Get-Item $FilePath
         $fileInfo.CreationTime = $originalCreationTime
         $fileInfo.LastWriteTime = $originalLastWriteTime
         
-        return @{
-            Success = $true
-            Error = ""
-        }
+        return @{ Success = $true; Error = "" }
     }
     catch {
-        return @{
-            Success = $false
-            Error = $_.Exception.Message
-        }
+        return @{ Success = $false; Error = $_.Exception.Message }
     }
 }
 
@@ -313,17 +287,17 @@ function Generate-Report {
         
         foreach ($file in $script:ProcessedFiles) {
             $report += [PSCustomObject]@{
-                "檔案路徑" = $file
-                "處理狀態" = "成功"
-                "錯誤訊息" = ""
+                "File Path" = $file
+                "Status" = "Success"
+                "Error Message" = ""
             }
         }
         
         foreach ($file in $script:FailedFiles) {
             $report += [PSCustomObject]@{
-                "檔案路徑" = $file.Path
-                "處理狀態" = "失敗"
-                "錯誤訊息" = $file.Error
+                "File Path" = $file.Path
+                "Status" = "Failed"
+                "Error Message" = $file.Error
             }
         }
         
@@ -339,7 +313,7 @@ function Generate-Report {
 
 # Create main form
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "Office 檔案中繼資料清理工具 v2.0"
+$form.Text = "Office Metadata Cleaner v2.0"
 $form.Size = New-Object System.Drawing.Size(800, 650)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -353,14 +327,14 @@ $form.Controls.Add($tabControl)
 
 # ===== Tab 1: Settings =====
 $tabSettings = New-Object System.Windows.Forms.TabPage
-$tabSettings.Text = "設置"
+$tabSettings.Text = "Settings"
 $tabControl.Controls.Add($tabSettings)
 
 # Folder selection
 $lblFolder = New-Object System.Windows.Forms.Label
 $lblFolder.Location = New-Object System.Drawing.Point(10, 15)
 $lblFolder.Size = New-Object System.Drawing.Size(100, 20)
-$lblFolder.Text = "目標資料夾："
+$lblFolder.Text = "Target Folder:"
 $tabSettings.Controls.Add($lblFolder)
 
 $txtFolder = New-Object System.Windows.Forms.TextBox
@@ -371,10 +345,10 @@ $tabSettings.Controls.Add($txtFolder)
 $btnBrowse = New-Object System.Windows.Forms.Button
 $btnBrowse.Location = New-Object System.Drawing.Point(650, 10)
 $btnBrowse.Size = New-Object System.Drawing.Size(100, 25)
-$btnBrowse.Text = "瀏覽..."
+$btnBrowse.Text = "Browse..."
 $btnBrowse.Add_Click({
     $folderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog
-    $folderBrowser.Description = "選擇要處理的資料夾"
+    $folderBrowser.Description = "Select folder to process"
     if ($folderBrowser.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         $txtFolder.Text = $folderBrowser.SelectedPath
     }
@@ -385,7 +359,7 @@ $tabSettings.Controls.Add($btnBrowse)
 $grpFileTypes = New-Object System.Windows.Forms.GroupBox
 $grpFileTypes.Location = New-Object System.Drawing.Point(10, 50)
 $grpFileTypes.Size = New-Object System.Drawing.Size(360, 120)
-$grpFileTypes.Text = "檔案類型"
+$grpFileTypes.Text = "File Types"
 $tabSettings.Controls.Add($grpFileTypes)
 
 $chkWord = New-Object System.Windows.Forms.CheckBox
@@ -413,7 +387,7 @@ $grpFileTypes.Controls.Add($chkPowerPoint)
 $grpMetadata = New-Object System.Windows.Forms.GroupBox
 $grpMetadata.Location = New-Object System.Drawing.Point(10, 180)
 $grpMetadata.Size = New-Object System.Drawing.Size(360, 280)
-$grpMetadata.Text = "中繼資料項目"
+$grpMetadata.Text = "Metadata Items"
 $tabSettings.Controls.Add($grpMetadata)
 
 $metadataCheckboxes = @{}
@@ -421,7 +395,7 @@ $metadataCheckboxes = @{}
 $chkTitle = New-Object System.Windows.Forms.CheckBox
 $chkTitle.Location = New-Object System.Drawing.Point(20, 25)
 $chkTitle.Size = New-Object System.Drawing.Size(150, 20)
-$chkTitle.Text = "標題 (Title)"
+$chkTitle.Text = "Title"
 $chkTitle.Checked = $true
 $grpMetadata.Controls.Add($chkTitle)
 $metadataCheckboxes["Title"] = $chkTitle
@@ -429,7 +403,7 @@ $metadataCheckboxes["Title"] = $chkTitle
 $chkSubject = New-Object System.Windows.Forms.CheckBox
 $chkSubject.Location = New-Object System.Drawing.Point(20, 55)
 $chkSubject.Size = New-Object System.Drawing.Size(150, 20)
-$chkSubject.Text = "主旨 (Subject)"
+$chkSubject.Text = "Subject"
 $chkSubject.Checked = $true
 $grpMetadata.Controls.Add($chkSubject)
 $metadataCheckboxes["Subject"] = $chkSubject
@@ -437,7 +411,7 @@ $metadataCheckboxes["Subject"] = $chkSubject
 $chkAuthor = New-Object System.Windows.Forms.CheckBox
 $chkAuthor.Location = New-Object System.Drawing.Point(20, 85)
 $chkAuthor.Size = New-Object System.Drawing.Size(150, 20)
-$chkAuthor.Text = "作者 (Author)"
+$chkAuthor.Text = "Author"
 $chkAuthor.Checked = $true
 $grpMetadata.Controls.Add($chkAuthor)
 $metadataCheckboxes["Author"] = $chkAuthor
@@ -445,7 +419,7 @@ $metadataCheckboxes["Author"] = $chkAuthor
 $chkManager = New-Object System.Windows.Forms.CheckBox
 $chkManager.Location = New-Object System.Drawing.Point(20, 115)
 $chkManager.Size = New-Object System.Drawing.Size(150, 20)
-$chkManager.Text = "經理 (Manager)"
+$chkManager.Text = "Manager"
 $chkManager.Checked = $true
 $grpMetadata.Controls.Add($chkManager)
 $metadataCheckboxes["Manager"] = $chkManager
@@ -453,7 +427,7 @@ $metadataCheckboxes["Manager"] = $chkManager
 $chkCompany = New-Object System.Windows.Forms.CheckBox
 $chkCompany.Location = New-Object System.Drawing.Point(190, 25)
 $chkCompany.Size = New-Object System.Drawing.Size(150, 20)
-$chkCompany.Text = "公司 (Company)"
+$chkCompany.Text = "Company"
 $chkCompany.Checked = $true
 $grpMetadata.Controls.Add($chkCompany)
 $metadataCheckboxes["Company"] = $chkCompany
@@ -461,7 +435,7 @@ $metadataCheckboxes["Company"] = $chkCompany
 $chkCategory = New-Object System.Windows.Forms.CheckBox
 $chkCategory.Location = New-Object System.Drawing.Point(190, 55)
 $chkCategory.Size = New-Object System.Drawing.Size(150, 20)
-$chkCategory.Text = "類別 (Category)"
+$chkCategory.Text = "Category"
 $chkCategory.Checked = $true
 $grpMetadata.Controls.Add($chkCategory)
 $metadataCheckboxes["Category"] = $chkCategory
@@ -469,7 +443,7 @@ $metadataCheckboxes["Category"] = $chkCategory
 $chkKeywords = New-Object System.Windows.Forms.CheckBox
 $chkKeywords.Location = New-Object System.Drawing.Point(190, 85)
 $chkKeywords.Size = New-Object System.Drawing.Size(150, 20)
-$chkKeywords.Text = "關鍵字 (Keywords)"
+$chkKeywords.Text = "Keywords"
 $chkKeywords.Checked = $true
 $grpMetadata.Controls.Add($chkKeywords)
 $metadataCheckboxes["Keywords"] = $chkKeywords
@@ -477,7 +451,7 @@ $metadataCheckboxes["Keywords"] = $chkKeywords
 $chkComments = New-Object System.Windows.Forms.CheckBox
 $chkComments.Location = New-Object System.Drawing.Point(190, 115)
 $chkComments.Size = New-Object System.Drawing.Size(150, 20)
-$chkComments.Text = "備註 (Comments)"
+$chkComments.Text = "Comments"
 $chkComments.Checked = $true
 $grpMetadata.Controls.Add($chkComments)
 $metadataCheckboxes["Comments"] = $chkComments
@@ -486,7 +460,7 @@ $metadataCheckboxes["Comments"] = $chkComments
 $btnSelectAll = New-Object System.Windows.Forms.Button
 $btnSelectAll.Location = New-Object System.Drawing.Point(20, 150)
 $btnSelectAll.Size = New-Object System.Drawing.Size(100, 30)
-$btnSelectAll.Text = "全選"
+$btnSelectAll.Text = "Select All"
 $btnSelectAll.Add_Click({
     foreach ($checkbox in $metadataCheckboxes.Values) {
         $checkbox.Checked = $true
@@ -497,7 +471,7 @@ $grpMetadata.Controls.Add($btnSelectAll)
 $btnDeselectAll = New-Object System.Windows.Forms.Button
 $btnDeselectAll.Location = New-Object System.Drawing.Point(130, 150)
 $btnDeselectAll.Size = New-Object System.Drawing.Size(100, 30)
-$btnDeselectAll.Text = "取消全選"
+$btnDeselectAll.Text = "Deselect All"
 $btnDeselectAll.Add_Click({
     foreach ($checkbox in $metadataCheckboxes.Values) {
         $checkbox.Checked = $false
@@ -509,26 +483,26 @@ $grpMetadata.Controls.Add($btnDeselectAll)
 $grpOptions = New-Object System.Windows.Forms.GroupBox
 $grpOptions.Location = New-Object System.Drawing.Point(390, 50)
 $grpOptions.Size = New-Object System.Drawing.Size(360, 80)
-$grpOptions.Text = "處理選項"
+$grpOptions.Text = "Processing Options"
 $tabSettings.Controls.Add($grpOptions)
 
 $chkIncludeSubfolders = New-Object System.Windows.Forms.CheckBox
 $chkIncludeSubfolders.Location = New-Object System.Drawing.Point(20, 30)
 $chkIncludeSubfolders.Size = New-Object System.Drawing.Size(300, 20)
-$chkIncludeSubfolders.Text = "包含子資料夾"
+$chkIncludeSubfolders.Text = "Include Subfolders"
 $chkIncludeSubfolders.Checked = $true
 $grpOptions.Controls.Add($chkIncludeSubfolders)
 
 # ===== Tab 2: Progress =====
 $tabProgress = New-Object System.Windows.Forms.TabPage
-$tabProgress.Text = "進度"
+$tabProgress.Text = "Progress"
 $tabControl.Controls.Add($tabProgress)
 
 # Status label
 $lblStatus = New-Object System.Windows.Forms.Label
 $lblStatus.Location = New-Object System.Drawing.Point(10, 15)
 $lblStatus.Size = New-Object System.Drawing.Size(730, 20)
-$lblStatus.Text = "準備就緒"
+$lblStatus.Text = "Ready"
 $tabProgress.Controls.Add($lblStatus)
 
 # Progress bar
@@ -556,7 +530,7 @@ $tabProgress.Controls.Add($logTextBox)
 $btnStart = New-Object System.Windows.Forms.Button
 $btnStart.Location = New-Object System.Drawing.Point(10, 560)
 $btnStart.Size = New-Object System.Drawing.Size(150, 40)
-$btnStart.Text = "開始執行"
+$btnStart.Text = "Start"
 $btnStart.BackColor = [System.Drawing.Color]::LightGreen
 $btnStart.Font = New-Object System.Drawing.Font($btnStart.Font.FontFamily, 10, [System.Drawing.FontStyle]::Bold)
 $form.Controls.Add($btnStart)
@@ -564,7 +538,7 @@ $form.Controls.Add($btnStart)
 $btnCancel = New-Object System.Windows.Forms.Button
 $btnCancel.Location = New-Object System.Drawing.Point(170, 560)
 $btnCancel.Size = New-Object System.Drawing.Size(150, 40)
-$btnCancel.Text = "取消"
+$btnCancel.Text = "Cancel"
 $btnCancel.BackColor = [System.Drawing.Color]::LightCoral
 $btnCancel.Font = New-Object System.Drawing.Font($btnCancel.Font.FontFamily, 10, [System.Drawing.FontStyle]::Bold)
 $btnCancel.Enabled = $false
@@ -573,7 +547,7 @@ $form.Controls.Add($btnCancel)
 $btnOpenReport = New-Object System.Windows.Forms.Button
 $btnOpenReport.Location = New-Object System.Drawing.Point(330, 560)
 $btnOpenReport.Size = New-Object System.Drawing.Size(150, 40)
-$btnOpenReport.Text = "打開報告"
+$btnOpenReport.Text = "Open Report"
 $btnOpenReport.BackColor = [System.Drawing.Color]::LightBlue
 $btnOpenReport.Font = New-Object System.Drawing.Font($btnOpenReport.Font.FontFamily, 10, [System.Drawing.FontStyle]::Bold)
 $btnOpenReport.Enabled = $false
@@ -584,24 +558,21 @@ $script:ReportPath = $null
 
 # Start button click event
 $btnStart.Add_Click({
-    # Validate input
     if ([string]::IsNullOrWhiteSpace($txtFolder.Text)) {
-        [System.Windows.Forms.MessageBox]::Show("請選擇目標資料夾", "錯誤", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        [System.Windows.Forms.MessageBox]::Show("Please select a target folder", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         return
     }
     
     if (-not (Test-Path $txtFolder.Text)) {
-        [System.Windows.Forms.MessageBox]::Show("指定的路徑不存在", "錯誤", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        [System.Windows.Forms.MessageBox]::Show("The specified path does not exist", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         return
     }
     
-    # Check if any file type is selected
     if (-not ($chkWord.Checked -or $chkExcel.Checked -or $chkPowerPoint.Checked)) {
-        [System.Windows.Forms.MessageBox]::Show("請至少選擇一種檔案類型", "錯誤", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        [System.Windows.Forms.MessageBox]::Show("Please select at least one file type", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         return
     }
     
-    # Check if any metadata item is selected
     $hasSelectedMetadata = $false
     foreach ($checkbox in $metadataCheckboxes.Values) {
         if ($checkbox.Checked) {
@@ -611,31 +582,27 @@ $btnStart.Add_Click({
     }
     
     if (-not $hasSelectedMetadata) {
-        [System.Windows.Forms.MessageBox]::Show("請至少選擇一個中繼資料項目", "錯誤", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+        [System.Windows.Forms.MessageBox]::Show("Please select at least one metadata item", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
         return
     }
     
-    # Disable settings during processing
     $btnStart.Enabled = $false
     $btnCancel.Enabled = $true
     $btnOpenReport.Enabled = $false
     $tabSettings.Enabled = $false
     $tabControl.SelectedTab = $tabProgress
     
-    # Reset variables
     $script:CancelRequested = $false
     $script:ProcessedFiles = @()
     $script:FailedFiles = @()
     $logTextBox.Clear()
     $progressBar.Value = 0
     
-    # Get selected file types
     $fileExtensions = @()
     if ($chkWord.Checked) { $fileExtensions += "*.doc", "*.docx" }
     if ($chkExcel.Checked) { $fileExtensions += "*.xls", "*.xlsx" }
     if ($chkPowerPoint.Checked) { $fileExtensions += "*.ppt", "*.pptx" }
     
-    # Get selected metadata items
     $selectedMetadata = @()
     foreach ($key in $metadataCheckboxes.Keys) {
         if ($metadataCheckboxes[$key].Checked) {
@@ -643,9 +610,8 @@ $btnStart.Add_Click({
         }
     }
     
-    Write-Log "開始掃描檔案..." "Info"
+    Write-Log "Starting file scan..." "Info"
     
-    # Scan for files
     $files = @()
     foreach ($extension in $fileExtensions) {
         if ($chkIncludeSubfolders.Checked) {
@@ -656,41 +622,40 @@ $btnStart.Add_Click({
     }
     
     if ($files.Count -eq 0) {
-        Write-Log "未找到符合條件的檔案" "Error"
-        [System.Windows.Forms.MessageBox]::Show("未找到符合條件的檔案", "資訊", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+        Write-Log "No matching files found" "Error"
+        [System.Windows.Forms.MessageBox]::Show("No matching files found", "Info", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
         $btnStart.Enabled = $true
         $btnCancel.Enabled = $false
         $tabSettings.Enabled = $true
         return
     }
     
-    Write-Log "找到 $($files.Count) 個檔案" "Info"
-    Write-Log "開始清理中繼資料..." "Info"
+    Write-Log "Found $($files.Count) files" "Info"
+    Write-Log "Starting metadata cleanup..." "Info"
     
-    # Process files
     $totalFiles = $files.Count
     $currentFile = 0
     
     foreach ($file in $files) {
         if ($script:CancelRequested) {
-            Write-Log "使用者取消操作" "Info"
+            Write-Log "User cancelled operation" "Info"
             break
         }
         
         $currentFile++
-        $lblStatus.Text = "正在處理：$($file.Name) ($currentFile/$totalFiles)"
+        $lblStatus.Text = "Processing: $($file.Name) ($currentFile/$totalFiles)"
         $progressBar.Value = [int](($currentFile / $totalFiles) * 100)
         [System.Windows.Forms.Application]::DoEvents()
         
-        Write-Log "處理檔案：$($file.FullName)" "Info"
+        Write-Log "Processing file: $($file.FullName)" "Info"
         
         $result = Process-File -FilePath $file.FullName -MetadataItems $selectedMetadata
         
         if ($result.Success) {
-            Write-Log "成功清理：$($file.Name)" "Success"
+            Write-Log "Successfully cleaned: $($file.Name)" "Success"
             $script:ProcessedFiles += $file.FullName
         } else {
-            Write-Log "失敗：$($file.Name) - $($result.Error)" "Error"
+            Write-Log "Failed: $($file.Name) - $($result.Error)" "Error"
             $script:FailedFiles += @{
                 Path = $file.FullName
                 Error = $result.Error
@@ -698,35 +663,31 @@ $btnStart.Add_Click({
         }
     }
     
-    # Cleanup Office applications
-    Write-Log "清理 Office 應用程式..." "Info"
+    Write-Log "Cleaning up Office applications..." "Info"
     Cleanup-OfficeApps
     
-    # Generate report
-    Write-Log "生成報告..." "Info"
+    Write-Log "Generating report..." "Info"
     $script:ReportPath = Generate-Report
     
     if ($null -ne $script:ReportPath) {
-        Write-Log "報告已生成：$script:ReportPath" "Success"
+        Write-Log "Report generated: $script:ReportPath" "Success"
         $btnOpenReport.Enabled = $true
     }
     
-    # Summary
-    Write-Log "==================== 處理完成 ====================" "Info"
-    Write-Log "成功：$($script:ProcessedFiles.Count) 個檔案" "Success"
-    Write-Log "失敗：$($script:FailedFiles.Count) 個檔案" "Error"
+    Write-Log "====== Processing Complete ======" "Info"
+    Write-Log "Successful: $($script:ProcessedFiles.Count) files" "Success"
+    Write-Log "Failed: $($script:FailedFiles.Count) files" "Error"
     
-    $lblStatus.Text = "處理完成"
+    $lblStatus.Text = "Processing Complete"
     $progressBar.Value = 100
     
-    # Re-enable controls
     $btnStart.Enabled = $true
     $btnCancel.Enabled = $false
     $tabSettings.Enabled = $true
     
     [System.Windows.Forms.MessageBox]::Show(
-        "處理完成`n成功：$($script:ProcessedFiles.Count)`n失敗：$($script:FailedFiles.Count)",
-        "完成",
+        "Processing Complete`nSuccessful: $($script:ProcessedFiles.Count)`nFailed: $($script:FailedFiles.Count)",
+        "Complete",
         [System.Windows.Forms.MessageBoxButtons]::OK,
         [System.Windows.Forms.MessageBoxIcon]::Information
     )
@@ -736,7 +697,7 @@ $btnStart.Add_Click({
 $btnCancel.Add_Click({
     $script:CancelRequested = $true
     $btnCancel.Enabled = $false
-    Write-Log "正在取消操作..." "Info"
+    Write-Log "Cancelling operation..." "Info"
 })
 
 # Open report button click event
