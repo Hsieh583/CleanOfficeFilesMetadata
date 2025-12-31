@@ -5,7 +5,11 @@
 ## 功能特點
 
 - 🎯 **批次處理**：一次處理多個檔案和資料夾
-- 📝 **支援多種格式**：Word (.doc, .docx)、Excel (.xls, .xlsx)、PowerPoint (.ppt, .pptx)
+- 📝 **支援多種格式**：Word (.doc, .docx)、Excel (.xls, .xlsx)、PowerPoint (.ppt, .pptx)、PDF (.pdf)
+- 🔄 **三種操作模式**：
+  - **清理模式**：清除中繼資料
+  - **讀取模式**：匯出中繼資料至 CSV
+  - **替換模式**：設定自訂中繼資料值
 - 🔒 **隱私保護**：清除作者、公司、經理等敏感資訊
 - ⏰ **時間戳記還原**：保持檔案原始的建立和修改時間
 - 📊 **詳細報告**：自動生成 CSV 格式的處理報告
@@ -51,9 +55,16 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 - ☑ Word (.doc, .docx)
 - ☑ Excel (.xls, .xlsx)
 - ☑ PowerPoint (.ppt, .pptx)
+- ☑ PDF (.pdf)
 
-#### 3. 選擇要清除的中繼資料項目
-選擇要清除的項目（可多選）：
+#### 3. 選擇操作模式
+選擇要執行的操作：
+- ⦿ **清理模式**：清除選定的中繼資料（預設）
+- ◯ **讀取模式**：僅讀取並匯出中繼資料至 CSV，不修改檔案
+- ◯ **替換模式**：將中繼資料替換為指定的值
+
+#### 4. 選擇中繼資料項目
+選擇要處理的項目（可多選）：
 - ☑ 標題 (Title)
 - ☑ 主旨 (Subject)
 - ☑ 作者 (Author)
@@ -67,7 +78,13 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 - 「全選」按鈕：勾選所有項目
 - 「取消全選」按鈕：取消所有項目
 
-#### 4. 處理選項
+#### 5. 替換模式選項（僅在替換模式下顯示）
+當選擇「替換模式」時，會顯示文字輸入框，可為每個中繼資料項目設定要替換的值。
+- 只有勾選的項目才會被替換
+- 留空表示清除該項目（與清理模式相同）
+- 可為不同項目設定不同的值
+
+#### 6. 處理選項
 - ☑ 包含子資料夾：遞迴處理所有子資料夾中的檔案
 
 ### 進度標籤
@@ -82,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 
 ### 控制按鈕
 
-- **開始執行** (綠色)：開始清理流程
+- **開始執行** (綠色)：開始執行選定的操作
 - **取消** (紅色)：中止正在執行的任務
 - **打開報告** (藍色)：開啟生成的 CSV 報告
 
@@ -92,6 +109,8 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 
 ### 報告格式
 
+#### 清理模式與替換模式報告
+
 **檔名範例**：`Cleanup_Report_20241231_143025.csv`
 
 **欄位結構**：
@@ -100,6 +119,18 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 "C:\Documents\file1.docx",成功,
 "C:\Documents\file2.xlsx",失敗,"檔案被鎖定"
 ```
+
+#### 讀取模式報告
+
+**檔名範例**：`Metadata_Report_20241231_143025.csv`
+
+**欄位結構**：
+```csv
+檔案路徑,標題,作者,公司,...
+"C:\Documents\file1.docx","年度報告","張三","ABC公司",...
+"C:\Documents\file2.xlsx","財務統計","李四","XYZ公司",...
+```
+*欄位會根據您選擇的中繼資料項目動態生成*
 
 ## 常見問題
 
@@ -114,10 +145,13 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 **A**: 不會。工具只清除中繼資料（檔案屬性），不會修改文件的實際內容。
 
 ### Q: 為什麼需要安裝 Microsoft Office？
-**A**: 工具使用 Office 的 COM 物件來安全地操作檔案，因此需要安裝 Office。
+**A**: Office 檔案（Word、Excel、PowerPoint）的處理使用 Office 的 COM 物件，因此需要安裝 Office。PDF 檔案處理不需要 Office。
+
+### Q: PDF 檔案處理有什麼限制？
+**A**: PDF 處理使用不同的技術。讀取模式可使用系統內建功能。若要完整清理或替換 PDF 中繼資料，建議將 itextsharp.dll 放在與工具相同的目錄。詳見 PDF_SUPPORT.md。
 
 ### Q: 可以還原清除的中繼資料嗎？
-**A**: 不可以。中繼資料一旦清除就無法還原，請在執行前確認或備份重要檔案。
+**A**: 不可以。中繼資料一旦清除就無法還原，請在執行前確認或備份重要檔案。建議先使用「讀取模式」查看中繼資料內容。
 
 ### Q: 工具會留下使用痕跡嗎？
 **A**: 不會。工具會還原檔案的原始時間戳記（建立時間和修改時間）。
@@ -148,10 +182,11 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 
 ## 版本資訊
 
-- **版本號**：2.0
+- **版本號**：2.1
 - **開發語言**：PowerShell 5.1+
 - **UI 框架**：.NET System.Windows.Forms
 - **Office 整合**：COM 物件
+- **PDF 支援**：iTextSharp（選用）或系統內建功能
 
 ## 授權
 
@@ -166,3 +201,4 @@ powershell -ExecutionPolicy Bypass -File ".\OfficeClear_Tool.ps1"
 - [快速開始.md](快速開始.md) - 30 秒快速入門指南
 - [技術文檔.md](技術文檔.md) - 開發者技術文檔
 - [CHANGELOG.md](CHANGELOG.md) - 版本更新記錄
+- [PDF_SUPPORT.md](PDF_SUPPORT.md) - PDF 檔案支援說明與 iTextSharp 安裝指南
