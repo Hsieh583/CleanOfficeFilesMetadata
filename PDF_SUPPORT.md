@@ -21,7 +21,7 @@
 ### 方法 1：下載預編譯的 DLL（推薦）
 
 1. 訪問 [iTextSharp NuGet 頁面](https://www.nuget.org/packages/iTextSharp/)
-2. 下載最新版本的 iTextSharp (5.5.13.3 或更高版本)
+2. 下載 iTextSharp 5.5.x 系列版本（推薦 5.5.13.3）
 3. 從 NuGet 套件中提取 `itextsharp.dll`
 4. 將 `itextsharp.dll` 複製到與 `OfficeClear_Tool.ps1` 相同的目錄
 
